@@ -1,0 +1,14 @@
+{
+  "name": "linkedin-post-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "OAuth + posting backend for LinkedIn, deployed on Cloudflare Workers",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail"
+  },
+  "devDependencies": {
+    "wrangler": "^3.90.0"
+  }
+}

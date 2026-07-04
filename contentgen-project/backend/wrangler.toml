@@ -1,0 +1,9 @@
+name = "linkedin-post-backend"
+main = "worker.js"
+compatibility_date = "2024-11-01"
+
+# Run: wrangler kv namespace create SESSIONS
+# Then paste the "id" it prints into the line below.
+kv_namespaces = [
+  { binding = "SESSIONS", id = "c99d3aa97ead4a6eb54de58da3b5a025" }
+]
