@@ -123,7 +123,7 @@ export default {
 
       // Send the user back to your front end, now "connected"
       // CHANGE THIS to your actual front-end URL
-      const frontEndUrl = "https://mariaaitech-collab.github.io/contentgen-project/";
+      const frontEndUrl = "https://mariaaitech-collab.github.io/contentgen-pro2/";
 
       return new Response(null, {
         status: 302,
