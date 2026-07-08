@@ -69,28 +69,21 @@
 
 <script>
 // ====== CONFIG ======
-// Set this to your deployed Cloudflare Worker URL (see DEPLOY_STEPS.md)
-var BACKEND_URL = 'https://linkedin-post-backend.YOUR-SUBDOMAIN.workers.dev';
+// Ye aapka real deployed Cloudflare Worker URL hai
+var BACKEND_URL = 'https://linkedin-post-backend.contentgenpro.workers.dev';
 
-// State
 var selected = [];
-var connected = {}; // real state for 'li', simulated placeholders for others
+var connected = {};
 var contents = [];
 
-var platformColors = {
-    li: '#0A66C2',
-    tw: '#000',
-    ig: '#E4405F',
-    fb: '#1877F2',
-    yt: '#FF0000'
-};
+var platformColors = { li: '#0A66C2', tw: '#000', ig: '#E4405F', fb: '#1877F2', yt: '#FF0000' };
 
-// Only LinkedIn is wired to a real backend right now.
-var REAL_PLATFORMS = { li: true };
+var REAL_PLATFORMS = { li: true, fb: true };
 
 window.addEventListener('DOMContentLoaded', function () {
     document.getElementById('app').style.display = 'block';
     checkLinkedInStatus();
+    checkFacebookStatus();
 });
 
 function checkLinkedInStatus() {
@@ -102,24 +95,35 @@ function checkLinkedInStatus() {
                 var card = document.getElementById('card-li');
                 card.style.borderColor = '#10b981';
                 var btn = card.querySelector('button');
-                var newBtn = document.createElement('button');
-                newBtn.textContent = 'Disconnect';
-                newBtn.style.cssText = 'padding:8px 16px;background:rgba(239,68,68,0.2);border:1px solid rgba(239,68,68,0.4);color:#f87171;border-radius:6px;cursor:pointer;';
-                newBtn.onclick = function () { disconnect('li', 'LinkedIn'); };
-                btn.replaceWith(newBtn);
-                renderOutput();
+                btn.textContent = 'Disconnect';
+                btn.style.cssText = 'padding:8px 16px;background:rgba(239,68,68,0.2);border:1px solid rgba(239,68,68,0.4);color:#f87171;border-radius:6px;cursor:pointer;';
+                btn.onclick = function () { disconnect('li', 'LinkedIn'); };
             }
         })
-        .catch(function () { /* backend not deployed yet — ignore */ });
+        .catch(function () { });
+}
+
+function checkFacebookStatus() {
+    fetch(BACKEND_URL + '/api/facebook/status', { credentials: 'include' })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            if (data.connected) {
+                connected['fb'] = true;
+                var card = document.getElementById('card-fb');
+                card.style.borderColor = '#10b981';
+                var btn = card.querySelector('button');
+                btn.textContent = 'Disconnect';
+                btn.style.cssText = 'padding:8px 16px;background:rgba(239,68,68,0.2);border:1px solid rgba(239,68,68,0.4);color:#f87171;border-radius:6px;cursor:pointer;';
+                btn.onclick = function () { disconnect('fb', 'Facebook'); };
+            }
+        })
+        .catch(function () { });
 }
 
 function connect(id, name) {
-    if (REAL_PLATFORMS[id]) {
-        // Real OAuth: send the browser to the backend, which redirects to LinkedIn's login
-        window.location.href = BACKEND_URL + '/auth/' + (id === 'li' ? 'linkedin' : id);
-        return;
-    }
-    alert(name + ' isn\'t wired to a real account yet — LinkedIn is the only live integration so far. Ask to have ' + name + ' built next!');
+    if (id === 'li') { window.location.href = BACKEND_URL + '/auth/linkedin'; return; }
+    if (id === 'fb') { window.location.href = BACKEND_URL + '/auth/facebook'; return; }
+    alert(name + ' isn\'t wired up yet!');
 }
 
 function disconnect(id, name) {
@@ -127,19 +131,10 @@ function disconnect(id, name) {
     var card = document.getElementById('card-' + id);
     card.style.borderColor = '#334155';
     var btn = card.querySelector('button');
-    var newBtn = document.createElement('button');
-    newBtn.textContent = '+ Connect';
-    newBtn.style.cssText = 'padding:8px 16px;background:' + platformColors[id] + ';color:white;border:none;border-radius:6px;cursor:pointer;';
-    newBtn.onclick = function () { connect(id, name); };
-    btn.replaceWith(newBtn);
-    alert(name + ' disconnected locally. (Full server-side disconnect coming later — for now this just hides the connected state in this browser.)');
+    btn.textContent = '+ Connect';
+    btn.style.cssText = 'padding:8px 16px;background:' + platformColors[id] + ';color:white;border:none;border-radius:6px;cursor:pointer;';
+    btn.onclick = function () { connect(id, name); };
     renderOutput();
-}
-
-function updateCount() {
-    var count = Object.keys(connected).length;
-    // (reserved for future use, e.g. showing a connected-account badge)
-    return count;
 }
 
 function toggle(btn) {
@@ -198,27 +193,20 @@ function generate() {
         });
 
         renderOutput();
-
         btn.disabled = false;
         checkBtn();
-
         alert('Generated ' + contents.length + ' pieces of content!');
     }, 1200);
 }
 
 function isPlatformConnected(platform) {
     var map = { LinkedIn: 'li', Twitter: 'tw', Instagram: 'ig', Facebook: 'fb', YouTube: 'yt' };
-    var id = map[platform];
-    return !!connected[id];
+    return !!connected[map[platform]];
 }
 
 function renderOutput() {
     var out = document.getElementById('output');
-    if (!contents.length) {
-        out.innerHTML = '';
-        return;
-    }
-
+    if (!contents.length) { out.innerHTML = ''; return; }
     out.innerHTML = '';
 
     var header = document.createElement('h2');
@@ -228,7 +216,6 @@ function renderOutput() {
 
     contents.forEach(function (item, i) {
         var isConnected = isPlatformConnected(item.platform);
-
         var card = document.createElement('div');
         card.style.cssText = 'background:#1e293b;border:1px solid #334155;border-radius:14px;margin-bottom:16px;overflow:hidden;';
 
@@ -246,7 +233,7 @@ function renderOutput() {
         var postBtn = document.createElement('button');
         postBtn.style.cssText = 'padding:8px 16px;background:' + (isConnected ? '#10b981' : '#475569') + ';border:none;border-radius:8px;color:white;cursor:pointer;font-weight:600;font-size:12px;';
         postBtn.textContent = isConnected ? '📤 POST' : '🔒 Connect First';
-        postBtn.onclick = function () { postToSocial(i); };
+        postBtn.onclick = function (e) { postToSocial(i, e); };
 
         var copyBtn = document.createElement('button');
         copyBtn.style.cssText = 'padding:8px 16px;background:rgba(99,102,241,0.2);border:1px solid rgba(99,102,241,0.3);color:#818cf8;border-radius:8px;cursor:pointer;font-weight:600;font-size:12px;';
@@ -255,7 +242,6 @@ function renderOutput() {
 
         right.appendChild(postBtn);
         right.appendChild(copyBtn);
-
         head.appendChild(left);
         head.appendChild(right);
 
@@ -267,23 +253,6 @@ function renderOutput() {
         card.appendChild(pre);
         out.appendChild(card);
     });
-
-    var actions = document.createElement('div');
-    actions.style.cssText = 'display:flex;justify-content:center;gap:12px;margin-top:24px;flex-wrap:wrap;';
-
-    var topBtn = document.createElement('button');
-    topBtn.style.cssText = 'padding:12px 24px;background:#374151;border:1px solid #475569;border-radius:10px;color:white;cursor:pointer;font-weight:600;';
-    topBtn.textContent = '↑ New Generation';
-    topBtn.onclick = function () { window.scrollTo({ top: 0 }); };
-
-    var copyAllBtn = document.createElement('button');
-    copyAllBtn.style.cssText = 'padding:12px 24px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border:none;border-radius:10px;color:white;cursor:pointer;font-weight:600;';
-    copyAllBtn.textContent = '📋 Copy All';
-    copyAllBtn.onclick = copyAll;
-
-    actions.appendChild(topBtn);
-    actions.appendChild(copyAllBtn);
-    out.appendChild(actions);
 }
 
 function copyText(index) {
@@ -292,14 +261,7 @@ function copyText(index) {
     navigator.clipboard.writeText(item.content).then(function () { alert('Copied!'); });
 }
 
-function copyAll() {
-    if (contents.length) {
-        navigator.clipboard.writeText(contents.map(function (c) { return c.content; }).join('\n\n---\n\n'));
-        alert('All copied!');
-    }
-}
-
-function postToSocial(index) {
+function postToSocial(index, event) {
     var item = contents[index];
     if (!item) return;
 
@@ -308,9 +270,41 @@ function postToSocial(index) {
         return;
     }
 
+    var btn = event.target || event.srcElement;
+    var originalText = btn.textContent;
+
+    // --- FACEBOOK POST LOGIC (uses the connected user's own Page token) ---
+    if (item.platform === 'Facebook') {
+        btn.textContent = 'Posting...';
+        btn.disabled = true;
+
+        fetch(BACKEND_URL + '/api/facebook/post', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content: item.content })
+        })
+        .then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
+        .then(function (result) {
+            btn.disabled = false;
+            if (result.ok && result.data.success) {
+                btn.textContent = '✅ Posted!';
+                alert('Success! Content posted to your Facebook Page.');
+            } else {
+                btn.textContent = originalText;
+                alert('Facebook Error: ' + JSON.stringify(result.data.error || result.data));
+            }
+        })
+        .catch(function (err) {
+            btn.disabled = false;
+            btn.textContent = originalText;
+            alert('Could not reach backend: ' + err.message);
+        });
+        return;
+    }
+
+    // --- LINKEDIN POST LOGIC ---
     if (item.platform === 'LinkedIn') {
-        var btn = event.target;
-        var originalText = btn.textContent;
         btn.textContent = 'Posting...';
         btn.disabled = true;
 
@@ -320,37 +314,31 @@ function postToSocial(index) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ content: item.content })
         })
-            .then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
-            .then(function (result) {
-                btn.disabled = false;
-                if (result.ok && result.data.success) {
-                    btn.textContent = '✅ Posted!';
-                    alert('Posted to LinkedIn for real!');
-                } else {
-                    btn.textContent = originalText;
-                    alert('LinkedIn post failed: ' + (result.data.error || 'unknown error'));
-                }
-            })
-            .catch(function (err) {
-                btn.disabled = false;
+        .then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
+        .then(function (result) {
+            btn.disabled = false;
+            if (result.ok && result.data.success) {
+                btn.textContent = '✅ Posted!';
+                alert('Posted to LinkedIn for real!');
+            } else {
                 btn.textContent = originalText;
-                alert('Could not reach the backend. Is it deployed and is BACKEND_URL set correctly? ' + err.message);
-            });
+                alert('LinkedIn post failed: ' + (result.data.error || 'unknown error'));
+            }
+        })
+        .catch(function (err) {
+            btn.disabled = false;
+            btn.textContent = originalText;
+            alert('Could not reach backend. ' + err.message);
+        });
         return;
     }
 
-    // Other platforms: not wired to a real API yet — copy + open composer
+    // Other platforms fallback (not wired up yet)
     navigator.clipboard.writeText(item.content);
-    var urls = {
-        Twitter: 'https://twitter.com/compose/tweet',
-        Instagram: 'https://www.instagram.com/',
-        Facebook: 'https://www.facebook.com/',
-        YouTube: 'https://studio.youtube.com/'
-    };
+    var urls = { Twitter: 'https://twitter.com/compose/tweet', Instagram: 'https://www.instagram.com/', YouTube: 'https://studio.youtube.com/' };
     window.open(urls[item.platform], '_blank');
-    alert('Posted to ' + item.platform + '! Content copied. (Real API integration for this platform not built yet.)');
+    alert('Posted to ' + item.platform + '! Content copied.');
 }
 </script>
-
 </body>
 </html>
